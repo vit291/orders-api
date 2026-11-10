@@ -5,8 +5,7 @@ const VAT = Number(process.env.VAT_RATE || 0.17);
 
 app.get("/health", (req, res) => res.send("ok"));
 
-app.get("/orders/:id/total", (req, res) => {
-  const subtotal = 100;
+app.get("/version", (req, res) => res.json({ version: "1.0.0" }));
   res.json({ total: subtotal * (1 + VAT) });
 });
 function applyDiscount(total, percent) {
