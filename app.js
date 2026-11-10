@@ -1,6 +1,6 @@
 const express = require("express");
 const app = express();
-const VAT = 0.17;
+const VAT = 0.18; // updated 2025
 
 app.get("/health", (req, res) => res.send("ok"));
 
