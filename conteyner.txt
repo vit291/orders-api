@@ -1,0 +1,40 @@
+git config --global user.name "Vitaliy.lev"
+git config --global user.email "vitaliyfrs@gmail.com"
+git config --global init.defaultBranch main
+git log --oneline
+git diff --staged
+
+git add app.js
+git commit -m "Merge VAT config"
+git log --oneline --graph --all
+
+git remote add origin https://github.com/YOUR-USER/orders-api.git
+git push -u origin main
+git remote -v
+
+
+git switch -c My/LL
+git switch main
+git merge feature/discount
+git switch master
+git pull
+git log --oneline -3
+
+docker ps
+docker images
+docker logs web
+docker logs -f web
+docker exec -it web sh
+docker stop web
+docker ps
+docker ps -a
+docker rm web
+
+cd orders-api
+git switch main && git pull
+git switch -c feature/docker
+git add .
+git commit -m "Upgrade to full orders-api"
+
+
+
