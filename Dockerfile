@@ -1,11 +1,11 @@
-FROM node:22-alpine
-
+FROM ____
 WORKDIR /app
-
+COPY ____ ./
+RUN ____
 COPY . .
-
-RUN npm install
-
+ARG APP_VERSION=dev
+ENV APP_VERSION=$APP_VERSION \
+    PORT=3000
 EXPOSE 3000
-
-CMD ["npm", "start"]
+USER node
+CMD ____
