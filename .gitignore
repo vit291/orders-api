@@ -5,12 +5,3 @@ node_modules/
 .terraform/
 *.tfstate
 *.tfstate.backup
-node_modules
-.git
-.github
-*.md
-.env
-Dockerfile
-compose.yaml
-k8s
-infra

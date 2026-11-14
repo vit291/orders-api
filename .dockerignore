@@ -1,0 +1,10 @@
+node_modules
+.git
+.github
+*.md
+.env
+Dockerfile
+compose.yaml
+k8s
+infra
+
