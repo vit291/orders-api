@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>orders-api · ממשק הזמנות</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: system-ui, "Segoe UI", Arial, sans-serif; background: #f3f5f9; color: #1d2433; }
+  header { background: #1d2433; color: #fff; padding: 18px 28px; display: flex; justify-content: space-between; align-items: center; }
+  header h1 { margin: 0; font-size: 22px; }
+  #status { padding: 6px 14px; border-radius: 999px; font-size: 14px; background: #5b6475; }
+  #status.ok { background: #1f9d55; }
+  #status.down { background: #d64545; }
+  main { max-width: 980px; margin: 28px auto; padding: 0 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .card { background: #fff; border-radius: 14px; padding: 22px; box-shadow: 0 2px 10px rgba(0,0,0,.06); }
+  .card.wide { grid-column: 1 / -1; }
+  h2 { margin: 0 0 16px; font-size: 18px; }
+  label { display: block; font-size: 14px; color: #5b6475; margin: 10px 0 4px; }
+  input { width: 100%; padding: 10px 12px; border: 1px solid #d3d8e2; border-radius: 8px; font-size: 16px; }
+  button { margin-top: 16px; width: 100%; padding: 11px; border: 0; border-radius: 8px; background: #2563eb; color: #fff; font-size: 16px; cursor: pointer; }
+  button:hover { background: #1d4fd8; }
+  .msg { margin-top: 14px; padding: 10px 12px; border-radius: 8px; font-size: 15px; display: none; }
+  .msg.ok { display: block; background: #e7f6ee; color: #146c3c; }
+  .msg.err { display: block; background: #fdecec; color: #a12b2b; }
+  table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+  td { padding: 8px 4px; border-bottom: 1px solid #eef0f4; }
+  td:last-child { text-align: left; font-weight: 600; }
+  tr.total td { border-bottom: 0; font-size: 18px; color: #2563eb; }
+  #recent { list-style: none; padding: 0; margin: 0; }
+  #recent li { padding: 10px 12px; border-radius: 8px; background: #f3f5f9; margin-bottom: 8px; cursor: pointer; }
+  #recent li:hover { background: #e6ebf5; }
+  .hint { color: #8a92a3; font-size: 14px; }
+  footer { text-align: center; color: #8a92a3; font-size: 13px; margin: 10px 0 30px; }
+  @media (max-width: 720px) { main { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>ממשק הזמנות</h1>
+  <span id="status">בודק חיבור…</span>
+</header>
+
+<main>
+  <section class="card">
+    <h2>הזמנה חדשה</h2>
+    <form id="create-form">
+      <label for="item">שם המוצר</label>
+      <input id="item" placeholder="למשל: מקלדת" required>
+      <label for="price">מחיר ליחידה (₪)</label>
+      <input id="price" type="number" min="0.01" step="0.01" required>
+      <label for="quantity">כמות</label>
+      <input id="quantity" type="number" min="1" value="1">
+      <button type="submit">יצירת הזמנה</button>
+    </form>
+    <div id="create-msg" class="msg"></div>
+  </section>
+
+  <section class="card">
+    <h2>חיפוש הזמנה</h2>
+    <form id="find-form">
+      <label for="order-id">מספר הזמנה</label>
+      <input id="order-id" type="number" min="1" required>
+      <button type="submit">הצגה</button>
+    </form>
+    <div id="find-msg" class="msg"></div>
+    <table id="details" hidden></table>
+  </section>
+
+  <section class="card wide">
+    <h2>הזמנות שנוצרו מהדף הזה</h2>
+    <ul id="recent"></ul>
+    <p id="recent-empty" class="hint">עדיין אין. לחיצה על הזמנה מציגה את הפרטים שלה.</p>
+  </section>
+</main>
+
+<footer>הממשק קורא לאותן נקודות קצה שבודקים עם curl:<br><bdi dir="ltr">GET /health · POST /orders · GET /orders/:id · GET /orders/:id/total</bdi></footer>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  const money = (n) => Number(n).toFixed(2) + " ₪";
+
+  function show(el, text, ok) {
+    el.textContent = text;
+    el.className = "msg " + (ok ? "ok" : "err");
+  }
+
+  const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+  async function api(path, options) {
+    let res;
+    try {
+      res = await fetch(path, options);
+    } catch {
+      throw new Error("השירות לא זמין");
+    }
+    const body = await res.json();
+    if (res.status === 404) throw new Error("ההזמנה לא נמצאה");
+    if (res.status === 400) throw new Error(String(body.error).includes("coupon") ? "קוד הקופון לא קיים" : "יש למלא שם מוצר ומחיר גדול מאפס");
+    if (!res.ok) throw new Error("שגיאה בשרת");
+    return body;
+  }
+
+  async function checkHealth() {
+    try {
+      const h = await api("/health");
+      $("status").textContent = "פעיל · גרסה " + h.version;
+      $("status").className = "ok";
+    } catch {
+      $("status").textContent = "השירות לא זמין";
+      $("status").className = "down";
+    }
+  }
+
+  async function showOrder(id) {
+    $("order-id").value = id;
+    try {
+      const order = await api("/orders/" + id);
+      const t = await api("/orders/" + id + "/total");
+      const rows = [
+        ["מוצר", order.item],
+        ["מחיר ליחידה", money(order.price)],
+        ["כמות", order.quantity],
+        ["לפני מע״מ", money(t.subtotal)],
+      ];
+      if (t.discount) rows.push(["הנחה", t.discount + "%"]);
+      rows.push(["מע״מ", Math.round(t.vat * 100) + "%"]);
+      $("details").innerHTML = rows.map(([k, v]) => `<tr><td>${k}</td><td>${esc(v)}</td></tr>`).join("")
+        + `<tr class="total"><td>סה״כ לתשלום</td><td>${money(t.total)}</td></tr>`;
+      $("details").hidden = false;
+      $("find-msg").className = "msg";
+    } catch (e) {
+      $("details").hidden = true;
+      show($("find-msg"), e.message, false);
+    }
+  }
+
+  $("create-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    try {
+      const order = await api("/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          item: $("item").value,
+          price: Number($("price").value),
+          quantity: Number($("quantity").value) || 1,
+        }),
+      });
+      show($("create-msg"), "הזמנה מספר " + order.id + " נוצרה", true);
+      const li = document.createElement("li");
+      li.textContent = "#" + order.id + " · " + order.item + " · " + order.quantity + " × " + money(order.price);
+      li.onclick = () => showOrder(order.id);
+      $("recent").prepend(li);
+      $("recent-empty").hidden = true;
+      e.target.reset();
+    } catch (err) {
+      show($("create-msg"), err.message, false);
+    }
+  });
+
+  $("find-form").addEventListener("submit", (e) => {
+    e.preventDefault();
+    showOrder($("order-id").value);
+  });
+
+  checkHealth();
+</script>
+</body>
+</html>

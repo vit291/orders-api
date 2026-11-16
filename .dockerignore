@@ -7,4 +7,6 @@ Dockerfile
 compose.yaml
 k8s
 infra
+*.tfstate.backup
+*.tfstategit branch -vv
 

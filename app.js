@@ -1,4 +1,5 @@
 const express = require("express");
+const path = require("path");
 const { createStore } = require("./store");
 
 const VAT = Number(process.env.VAT_RATE || 0.18);
@@ -6,6 +7,7 @@ const VAT = Number(process.env.VAT_RATE || 0.18);
 function buildApp(store = createStore()) {
   const app = express();
   app.use(express.json());
+  app.use(express.static(path.join(__dirname, "public")));
 
   app.get("/health", (req, res) => {
     res.json({ status: "ok", version: process.env.APP_VERSION || "dev" });
