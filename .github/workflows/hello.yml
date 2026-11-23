@@ -1,0 +1,27 @@
+name: Hello
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  info:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v6
+
+      - name: Print run info
+        run: |
+          echo "Repository: ${{ github.repository }}"
+          echo "Branch:     ${{ github.ref_name }}"
+          echo "Commit:     ${{ github.sha }}"
+          echo "Event:      ${{ github.event_name }}"
+          echo "Actor:      ${{ github.actor }}"
+          ls -la
+
+  goodbye:
+    needs: info
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Runs only after 'info' finished successfully"
