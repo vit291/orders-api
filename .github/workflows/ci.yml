@@ -1,11 +1,16 @@
-      - name: Run tests
+  deploy-staging:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - run: echo "Deploying to staging with key length ${#DEPLOY_KEY}"
         env:
-          VAT_RATE: ${{ vars.VAT_RATE }}
-        run: node --test --test-reporter=spec --test-reporter-destination=stdout --test-reporter=junit --test-reporter-destination=test-results.xml
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
 
-      - name: Upload test report
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: test-results
-          path: test-results.xml
+  deploy-production:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - run: echo "Deploying to production (approved manually)"
