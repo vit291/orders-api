@@ -40,3 +40,4 @@ function buildApp(store = createStore()) {
 }
 
 module.exports = { buildApp };
+// End of file
