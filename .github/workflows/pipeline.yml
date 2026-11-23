@@ -1,0 +1,37 @@
+name: Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-test-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Set image name (registry names must be lowercase)
+        run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
+      - name: Build image
+        run: docker build --build-arg APP_VERSION=${{ github.sha }} -t $IMAGE:${{ github.sha }} .
+
+      - name: Run tests inside the image
+        run: docker run --rm $IMAGE:${{ github.sha }} npm test
+
+      - name: Log in to GitHub Container Registry
+        if: github.ref == 'refs/heads/main'
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Push image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker tag $IMAGE:${{ github.sha }} $IMAGE:latest
+          docker push $IMAGE:${{ github.sha }}
+          docker push $IMAGE:latest
+          echo "Pushed: $IMAGE:${{ github.sha }}" >> "$GITHUB_STEP_SUMMARY"
