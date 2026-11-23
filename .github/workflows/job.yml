@@ -1,0 +1,8 @@
+  report:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: test-results
+      - run: echo "Tests in report: $(grep -c '<testcase' test-results.xml)"
